@@ -1,0 +1,59 @@
+# Уникальный идентификатор сайта (домен без схемы, точки → дефисы)
+# Пример: example-com, somedomain-org
+id: ""
+
+# Основной URL и список альтернативных адресов
+urls:
+  - ""
+# urls:
+#   - "https://example.com/"          # clearnet
+#   - "http://xxx.onion/"             # tor
+#   - "http://xxx.i2p/"               # i2p
+
+# Дата открытия сайта (YYYY, YYYY-MM или YYYY-MM-DD)
+created: ""
+
+# Теги — набор характеристик сайта
+# Обязательные группы: cycle, service, locale, net
+tags:
+  # Жизненный цикл (одно из):
+  #   cycle:live      — живой
+  #   cycle:ghost     — отмирающий
+  #   cycle:readonly  — только чтение
+  #   cycle:stub      — заглушка
+  #   cycle:dead      — мёртвый
+  #   cycle:unlisted  — исключённый
+  - cycle:live
+
+  # Сервисы (одно или несколько):
+  #   service:board   — борда
+  #   service:chat    — чат
+  #   service:wiki    — вики
+  #   service:blog    — блог
+  #   service:archive — архив
+  #   service:gallery — галерея
+  #   service:index   — список ссылок
+  #   service:news    — новости
+  #   service:stream  — стримы / радио
+  - service:board
+
+  # Сети (одно или несколько):
+  #   net:www  — клирнет
+  #   net:tor  — Tor
+  #   net:i2p  — I2P
+  - net:www
+
+  # Языки (одно или несколько):
+  #   locale:ru  locale:en  locale:uk  locale:de  ...
+  - locale:ru
+
+  # Дополнительные (необязательные):
+  #   access:limited    — ограниченный доступ
+  #   quality:cheap     — дешёвая инфраструктура
+  #   quality:clone     — клон
+  #   quality:obscure   — нестандартная концепция
+  #   quality:mods      — злоупотребление модерацией
+  #   community:iich    community:ex0ch  community:ex1ch
+  #   community:ex2ch   community:exapach  community:foreign
+  #   diff:new          — добавлен в текущей редакции
+  #   diff:move         — к перемещению в следующей редакции
