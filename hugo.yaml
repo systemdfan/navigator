@@ -1,0 +1,41 @@
+baseURL: "https://systemdfan.github.io/navigator/"
+languageCode: "ru"
+title: "Навигатор Парашесферы"
+enableGitInfo: true          # ← Hugo вытаскивает даты из git
+
+params:
+  description: "Независимый каталог русскоязычных борд"
+  sourceURL: "https://github.com/systemdfan/navigator"
+  feedbackURL: ""
+  surveyURL: ""
+  discussionURL: ""
+
+  # Метка текущей версии; обновляется вручную при релизе
+  version: "0.0.1"
+
+outputs:
+  home:
+    - HTML
+    - indexJSON      # → /index.json   (собственная схема)
+    - ccd0JSON       # → /index.ccd0-compat.json
+
+outputFormats:
+  indexJSON:
+    mediaType: "application/json"
+    baseName: "index"
+    isPlainText: true
+    notAlternative: true
+  ccd0JSON:
+    mediaType: "application/json"
+    baseName: "index.ccd0-compat"
+    isPlainText: true
+    notAlternative: true
+
+mediaTypes:
+  "application/json":
+    suffixes: ["json"]
+
+# Не создавать страницы для отдельных сайтов (только главная)
+disableKinds:
+  - "taxonomy"
+  - "term"
