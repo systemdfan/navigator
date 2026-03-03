@@ -1,0 +1,94 @@
+{{- /*
+  layouts/index.ccd0JSON.json
+  Генерирует /index.ccd0-compat.json — совместимость с ccd0/imageboards.json.
+
+  Фильтр «подходящих»:
+    - cycle:live  ИЛИ  cycle:ghost
+    - service:board  ИЛИ  service:chat
+
+  Маппинг полей:
+    name       → id (домен без схемы)
+    url        → первый WWW-URL
+    mirrors    → остальные WWW-URL
+    entrances  → Tor-адреса
+    redirects  → I2P-адреса (нет стандарта — используем redirects)
+    language   → locale-теги (только код после "locale:")
+    software   → пустой массив (нет в нашей схеме)
+    boardlist  → опционально (нет в нашей схеме)
+*/ -}}
+
+{{- $allSites := slice -}}
+{{- range (readDir "content/sites") -}}
+  {{- if strings.HasSuffix .Name ".yaml" -}}
+    {{- $raw := readFile (printf "content/sites/%s" .Name) -}}
+    {{- $s := $raw | transform.Unmarshal -}}
+    {{- $allSites = $allSites | append $s -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Фильтрация: только активные борды/чаты */ -}}
+{{- $compatible := slice -}}
+{{- range $allSites -}}
+  {{- $tags := .tags | default slice -}}
+  {{- $isActive := or (in $tags "cycle:live") (in $tags "cycle:ghost") -}}
+  {{- $isBoard  := or (in $tags "service:board") (in $tags "service:chat") -}}
+  {{- if and $isActive $isBoard -}}
+    {{- $compatible = $compatible | append . -}}
+  {{- end -}}
+{{- end -}}
+
+[
+  {{- range $i, $s := $compatible -}}
+  {{- if $i }},{{ end }}
+  {{- $tags := $s.tags | default slice -}}
+  {{- $urls  := $s.urls | default slice -}}
+
+  {{- /* Разбиваем URL по типу сети */ -}}
+  {{- $wwwURLs := slice -}}
+  {{- $torURLs := slice -}}
+  {{- $i2pURLs := slice -}}
+  {{- range $urls -}}
+    {{- if strings.HasSuffix . ".onion/" -}}{{- $torURLs = $torURLs | append . -}}
+    {{- else if strings.HasSuffix . ".onion" -}}{{- $torURLs = $torURLs | append . -}}
+    {{- else if strings.HasSuffix . ".i2p/" -}}{{- $i2pURLs = $i2pURLs | append . -}}
+    {{- else if strings.HasSuffix . ".i2p" -}}{{- $i2pURLs = $i2pURLs | append . -}}
+    {{- else -}}{{- $wwwURLs = $wwwURLs | append . -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $primaryURL := index $wwwURLs 0 | default (index $torURLs 0) | default (index $urls 0) | default "" -}}
+  {{- $mirrors    := slice -}}
+  {{- if gt (len $wwwURLs) 1 -}}
+    {{- $mirrors = after 1 $wwwURLs -}}
+  {{- end -}}
+
+  {{- /* Языки */ -}}
+  {{- $langs := slice -}}
+  {{- range $tags -}}
+    {{- if strings.HasPrefix . "locale:" -}}
+      {{- $langs = $langs | append (strings.TrimPrefix "locale:" .) -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- /* Имя = домен первого URL */ -}}
+  {{- $name := $primaryURL -}}
+  {{- $name = $name | replaceRE "^https?://" "" -}}
+  {{- $name = $name | replaceRE "/.*$" "" -}}
+
+  {
+    "name": {{ $name | jsonify }},
+    "url": {{ $primaryURL | jsonify }}
+    {{- if $mirrors }},
+    "mirrors": {{ $mirrors | jsonify }}
+    {{- end }}
+    {{- if $torURLs }},
+    "entrances": {{ $torURLs | jsonify }}
+    {{- end }}
+    {{- if $i2pURLs }},
+    "redirects": {{ $i2pURLs | jsonify }}
+    {{- end }},
+    "language": {{ $langs | jsonify }},
+    "software": []
+  }
+  {{- end }}
+]

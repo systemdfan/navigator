@@ -1,0 +1,333 @@
+{{- /*
+  layouts/index.html
+  Главная страница каталога.
+
+  Логика сборки:
+  1. Читаем все YAML из content/sites/
+  2. Группируем по тегу cycle:*
+  3. Внутри группы — сортируем по полю created (новые сначала)
+*/ -}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{ .Site.Params.description }}">
+  <meta name="theme-color" content="#1a1a1a">
+  <title>{{ .Site.Title }}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚓</text></svg>">
+  <style>
+    html {
+      --palette-gray-0: #ffffffff;
+      --palette-gray-1: #a2a2a2ff;
+      --palette-gray-2: #444444ff;
+      --palette-gray-3: #222222ff;
+      --palette-gray-4: #1a1a1aff;
+      --palette-red: #362422ff;
+      --palette-green: #222b26ff;
+      --palette-blue: #1d282eff;
+      --palette-yellow: #392e1eff;
+
+      --color-main: var(--palette-gray-0);
+      --color-misc: var(--palette-gray-1);
+      --color-mute: var(--palette-gray-2);
+      --color-new: var(--palette-green);
+      --color-move: var(--palette-yellow);
+
+      --color-cell-background: var(--palette-gray-3);
+      --color-page-background: var(--palette-gray-4);
+
+      --border-radius: 0.25rem;
+
+      --font-size-xl: 1.6rem;
+      --font-size-l: 1.2rem;
+      --font-size-m: 1rem;
+      --font-size-s: 0.8rem;
+
+      --font: var(--font-size-m) / 1.6 "Tahoma", sans-serif;
+      --text-shadow: 0px 0px 4rem #ffffff44;
+
+      color-scheme: dark light;
+    }
+
+    ::selection {
+      color: var(--color-page-background);
+      background-color: var(--color-misc);
+    }
+
+    body {
+      margin: 0 auto;
+      padding: 0.5rem 1rem 1rem;
+      max-width: 87rem;
+      color: var(--color-misc);
+      background-color: var(--color-page-background);
+      font: var(--font);
+      overflow-y: scroll;
+    }
+
+    a { color: var(--color-main); text-decoration: none; }
+    a:hover { text-decoration: underline var(--color-misc); }
+
+    h1, h2, h3, p { margin: 1rem 0; font: var(--font); }
+    h1, h2, h3 { margin: 1.5rem 0; color: var(--color-main); font-weight: 600; }
+    h1 { font-size: var(--font-size-xl); text-shadow: var(--text-shadow); }
+    h2 { font-size: var(--font-size-l); }
+    h3 { font-size: var(--font-size-m); }
+
+    hr { background-color: var(--color-mute); height: 1px; border: none; margin: 2rem 0; }
+
+    .sites-grid {
+      margin: 1.5rem 0;
+      padding-left: 0;
+      display: grid;
+      gap: 0.125rem;
+    }
+
+    .sites-cell {
+      list-style: none;
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--border-radius);
+      background-color: var(--color-cell-background);
+      min-width: 0;
+      transition: opacity 0.2s;
+    }
+
+    .sites-cell.is-new-tag  { background-color: var(--color-new); }
+    .sites-cell.is-move-tag { background-color: var(--color-move); }
+
+    .sites-cell-key,
+    .sites-cell-value { display: block; }
+
+    .sites-cell-value { font-size: var(--font-size-s); }
+
+    .is-stub-tag .sites-cell { opacity: 0.8; }
+    .is-dead-tag .sites-cell { opacity: 0.6; }
+    .sites-cell:hover { opacity: 1; }
+
+    .tags-grid {
+      display: grid;
+      grid-template-columns: min-content 1fr;
+      column-gap: 1rem;
+      row-gap: 0.5rem;
+    }
+
+    .tags-cell-key { color: var(--color-main); }
+    .tags-cell-value { margin-left: 0; line-height: 1.25; hyphens: auto; }
+
+    .sites-cell:target,
+    .tags-cell-key:target { animation: target 1s linear; }
+
+    .cycle {
+      position: relative;
+      float: right;
+      font-size: var(--font-size-s);
+    }
+
+    .color-misc { color: var(--color-misc); }
+    .vr { margin: 0 0.5rem; color: var(--color-mute); }
+
+    @media screen and (min-width: 45rem) {
+      .sites-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media screen and (min-width: 70rem) {
+      .sites-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media screen and (min-width: 87rem) {
+      .sites-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body
+  data-version="{{ .Site.Params.version }}"
+  data-created="{{ (site.Params.created | default "") }}"
+  data-updated="{{ now.Format "2006-01-02" }}"
+>
+
+{{- /*
+  Загружаем все файлы из content/sites/
+  Hugo читает YAML-файлы из content/ как data-страницы через .Site.Data
+  или через листинг страниц. Мы используем Data-файлы через data/ директорию.
+  Но поскольку файлы лежат в content/sites/, используем headless bundle подход:
+  просто читаем их через site.Data.sites, который мы собираем через Hugo data pipeline.
+*/ -}}
+
+{{- $allSites := slice -}}
+{{- range (readDir "content/sites") -}}
+  {{- if strings.HasSuffix .Name ".yaml" -}}
+    {{- $raw := readFile (printf "content/sites/%s" .Name) -}}
+    {{- $site := $raw | transform.Unmarshal -}}
+    {{- $allSites = $allSites | append $site -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Группируем по cycle-тегу */ -}}
+{{- $cycleOrder := slice "live" "ghost" "readonly" "stub" "dead" "unlisted" -}}
+{{- $cycleLabels := dict
+  "live"     "Живые"
+  "ghost"    "Отмирающие"
+  "readonly" "Только чтение"
+  "stub"     "Заглушки"
+  "dead"     "Мёртвые"
+  "unlisted" "Исключённые"
+-}}
+
+{{- /* Вспомогательная функция — получить первый URL сайта */ -}}
+
+<header>
+  <h1>{{ .Site.Title }}</h1>
+  <p>{{ .Site.Params.description }}</p>
+</header>
+
+<main>
+  <article>
+
+  {{- range $cycleKey := $cycleOrder -}}
+    {{- $label := index $cycleLabels $cycleKey -}}
+    {{- $cycleTag := printf "cycle:%s" $cycleKey -}}
+
+    {{- /* Фильтруем сайты с этим cycle-тегом */ -}}
+    {{- $group := slice -}}
+    {{- range $allSites -}}
+      {{- if in (.tags | default slice) $cycleTag -}}
+        {{- $group = $group | append . -}}
+      {{- end -}}
+    {{- end -}}
+
+    {{- if $group -}}
+      {{- /* Сортируем по created: новые сначала, без даты — в конце */ -}}
+      {{- $withDate    := slice -}}
+      {{- $withoutDate := slice -}}
+      {{- range $group -}}
+        {{- if .created -}}
+          {{- $withDate = $withDate | append . -}}
+        {{- else -}}
+          {{- $withoutDate = $withoutDate | append . -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $sorted := sort $withDate "created" "desc" -}}
+      {{- $group = $sorted | append $withoutDate -}}
+
+      <section class="is-{{ $cycleKey }}-tag">
+        <h2>{{ $label }} ({{ len $group }})</h2>
+        <ul class="sites-grid">
+        {{- range $group -}}
+          {{- $tags := .tags | default slice -}}
+          {{- $isNew  := in $tags "diff:new" -}}
+          {{- $isMove := in $tags "diff:move" -}}
+
+          {{- /* Собираем CSS-классы */ -}}
+          {{- $classes := slice (printf "is-%s-tag" $cycleKey) -}}
+          {{- if $isNew  -}}{{- $classes = $classes | append "is-new-tag"  -}}{{- end -}}
+          {{- if $isMove -}}{{- $classes = $classes | append "is-move-tag" -}}{{- end -}}
+          {{- range $tags -}}
+            {{- $parts := split . ":" -}}
+            {{- if gt (len $parts) 1 -}}
+              {{- $classes = $classes | append (printf "is-%s-tag" (index $parts 1)) -}}
+            {{- end -}}
+          {{- end -}}
+
+          {{- /* Первый URL для отображения */ -}}
+          {{- $urls := .urls | default slice -}}
+          {{- $primaryURL := index $urls 0 | default "#" -}}
+
+          {{- /* Форматируем отображаемый адрес */ -}}
+          {{- $displayURL := $primaryURL -}}
+          {{- $displayURL = $displayURL | replaceRE "^https?://" "" -}}
+          {{- $displayURL = $displayURL | replaceRE "/$" "" -}}
+          {{- /* Для onion-адресов — сокращаем */ -}}
+          {{- if strings.HasSuffix $displayURL ".onion" -}}
+            {{- $parts2 := split $displayURL "." -}}
+            {{- $onionHost := index $parts2 0 -}}
+            {{- if gt (len $onionHost) 20 -}}
+              {{- $displayURL = printf "%s…%s.onion" (substr $onionHost 0 12) (substr $onionHost (sub (len $onionHost) 5) (len $onionHost)) -}}
+            {{- end -}}
+          {{- end -}}
+
+          {{- /* Собираем не-board, не-cycle, не-net, не-locale, не-diff, не-quality теги для отображения */ -}}
+          {{- $visibleTags := slice -}}
+          {{- range $tags -}}
+            {{- if and
+              (not (strings.HasPrefix . "cycle:"))
+              (not (strings.HasPrefix . "net:"))
+              (not (strings.HasPrefix . "locale:"))
+              (not (strings.HasPrefix . "diff:"))
+              (not (strings.HasPrefix . "community:"))
+              (ne . "service:board")
+            -}}
+              {{- $visibleTags = $visibleTags | append . -}}
+            {{- end -}}
+          {{- end -}}
+
+          <li class="sites-cell {{ delimit $classes " " }}" id="{{ .id }}">
+            <span class="sites-cell-key">
+              <a href="{{ $primaryURL }}" target="_blank" rel="noopener noreferrer">{{ $displayURL }}</a>
+              {{- if $isNew  -}}<span class="cycle" title="Добавлено в текущей редакции"> new </span>{{- end -}}
+              {{- if $isMove -}}<span class="cycle" title="К перемещению в следующей редакции"> move </span>{{- end -}}
+            </span>
+            <span class="sites-cell-value">
+              {{- if .created -}}
+                {{- $year := substr .created 0 4 -}}
+                <time datetime="{{ .created }}" title="{{ .created }}">{{ $year }}</time>
+              {{- end -}}
+              {{- range $visibleTags -}}
+                {{- $tagParts := split . ":" -}}
+                {{- $tagShort := index $tagParts (sub (len $tagParts) 1) -}}
+                <a class="color-misc" href="#{{ $tagShort }}" title="{{ . }}">#{{ $tagShort }}</a>
+              {{- end -}}
+            </span>
+          </li>
+        {{- end -}}
+        </ul>
+      </section>
+    {{- end -}}
+  {{- end -}}
+
+  </article>
+
+  <article>
+    <section>
+      <h3>Условные обозначения</h3>
+      <dl class="tags-grid">
+        <dt class="tags-cell-key" id="foreign">#foreign</dt>
+        <dd class="tags-cell-value">Зарубежный сайт с русскоязычным содержимым</dd>
+        <dt class="tags-cell-key" id="obscure">#obscure</dt>
+        <dd class="tags-cell-value">Нестандартная концепция использования</dd>
+        <dt class="tags-cell-key" id="limited">#limited</dt>
+        <dd class="tags-cell-value">Доступ значительно ограничен владельцем</dd>
+        <dt class="tags-cell-key" id="cheap">#cheap</dt>
+        <dd class="tags-cell-value">Бесплатная или базовая инфраструктура</dd>
+        <dt class="tags-cell-key" id="clone">#clone</dt>
+        <dd class="tags-cell-value">Намеренное копирование атрибутов сторонних проектов</dd>
+        <dt class="tags-cell-key" id="mods">#mods</dt>
+        <dd class="tags-cell-value">Злоупотребление модераторскими полномочиями</dd>
+        <dt class="tags-cell-key" id="archive">#archive</dt>
+        <dd class="tags-cell-value">Статичное содержимое, архивы устаревших ресурсов</dd>
+        <dt class="tags-cell-key" id="blog">#blog</dt>
+        <dd class="tags-cell-value">Персональный, коллективный блог, личная страница</dd>
+        <dt class="tags-cell-key" id="chat">#chat</dt>
+        <dd class="tags-cell-value">Чат, чатоподобная площадка для общения</dd>
+        <dt class="tags-cell-key" id="gallery">#gallery</dt>
+        <dd class="tags-cell-value">Коллекция тематических изображений</dd>
+        <dt class="tags-cell-key" id="index">#index</dt>
+        <dd class="tags-cell-value">Список ссылок, имеющих отношение к бордосфере</dd>
+        <dt class="tags-cell-key" id="news">#news</dt>
+        <dd class="tags-cell-value">Новости, обзоры и обсуждения последних событий</dd>
+        <dt class="tags-cell-key" id="stream">#stream</dt>
+        <dd class="tags-cell-value">Интернет-радио, стримы, потоковое содержимое</dd>
+        <dt class="tags-cell-key" id="wiki">#wiki</dt>
+        <dd class="tags-cell-value">База знаний, вики-система</dd>
+      </dl>
+    </section>
+  </article>
+</main>
+
+<hr>
+<footer>
+  <p>
+    {{- if .Site.Params.sourceURL -}}
+    <a href="{{ .Site.Params.sourceURL }}">Источник</a>
+    {{- end -}}
+  </p>
+</footer>
+</body>
+</html>
