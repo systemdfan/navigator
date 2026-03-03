@@ -1,0 +1,9 @@
+id: "deadchan-example"
+urls:
+  - "https://deadchan.example.com/"
+created: "2018-05-01"
+tags:
+  - cycle:dead
+  - service:board
+  - net:www
+  - locale:ru

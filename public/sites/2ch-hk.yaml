@@ -1,0 +1,10 @@
+id: "2ch-hk"
+urls:
+  - "https://2ch.hk/"
+created: "2006-09-01"
+tags:
+  - cycle:live
+  - service:board
+  - net:www
+  - locale:ru
+  - community:ex2ch

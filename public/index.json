@@ -1,0 +1,19 @@
+[{
+    "name": "0chan.club",
+    "url": "https://0chan.club/",
+    "entrances": ["http://oeszxxcn5g5qjh4iqxfmotq5voswhnk5d26e6qn2d5w52jkv6vwjrnad.onion/"],
+    "redirects": ["http://0chan.i2p/"],
+    "language": ["ru"],
+    "software": []
+  },{
+    "name": "2ch.hk",
+    "url": "https://2ch.hk/",
+    "language": ["ru"],
+    "software": []
+  },{
+    "name": "wiki.example.ru",
+    "url": "https://wiki.example.ru/",
+    "language": ["ru"],
+    "software": []
+  }
+]

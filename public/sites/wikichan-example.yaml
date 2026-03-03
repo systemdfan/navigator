@@ -1,0 +1,11 @@
+id: "wikichan-example"
+urls:
+  - "https://wiki.example.ru/"
+created: "2019-01-15"
+tags:
+  - cycle:ghost
+  - service:wiki
+  - service:board
+  - net:www
+  - locale:ru
+  - diff:new
